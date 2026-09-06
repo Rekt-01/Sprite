@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mobile Pixel Sprite GitHub Pusher</title>
+    <title>Human Sprite to GitHub</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -33,7 +33,7 @@
         input, button {
             width: 100%;
             padding: 12px;
-            margin-top: 10-px;
+            margin-top: 5px;
             margin-bottom: 12px;
             background: #21262d;
             border: 1px solid #30363d;
@@ -93,7 +93,7 @@
 <body>
 
 <div class="container">
-    <h2>Sprite to GitHub</h2>
+    <h2>Human Sprite Generator</h2>
     
     <label>GitHub Personal Access Token (repo scope)</label>
     <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx">
@@ -102,13 +102,13 @@
     <input type="text" id="ghRepo" placeholder="username/my-pixel-sprites">
 
     <label>Sprite File Name</label>
-    <input type="text" id="spriteName" value="hero_01.png">
+    <input type="text" id="spriteName" value="human_hero_01.png">
 
     <div class="canvas-container">
         <canvas id="spriteCanvas" width="16" height="16"></canvas>
     </div>
 
-    <button class="secondary" onclick="generateSprite()">🎲 Generate New Sprite</button>
+    <button class="secondary" onclick="generateSprite()">🎲 Generate New Human Sprite</button>
     <button onclick="pushToGitHub()">🚀 Push to GitHub</button>
     
     <div id="status" class="status"></div>
@@ -119,17 +119,43 @@
     const ctx = canvas.getContext('2d');
     const size = 16;
 
-    // Procedurally generate an 8-bit symmetrical character sprite
+    // Human template layout for the left half (columns 0 to 7, mirrored to 8 to 15)
+    // 0 = transparent, 1 = hair, 2 = skin, 3 = shirt/body, 4 = pants, 5 = shoes
+    const humanTemplate = [
+        "00001110", // Row 0
+        "00011111", // Row 1
+        "00012221", // Row 2
+        "00012321", // Row 3 (eyes at col 6)
+        "00002220", // Row 4
+        "00133331", // Row 5 (shoulders)
+        "03333333", // Row 6 (arms/torso)
+        "03333333", // Row 7
+        "00333330", // Row 8
+        "00333330", // Row 9
+        "00444440", // Row 10 (pants)
+        "00400400", // Row 11 (legs)
+        "00400400", // Row 12
+        "00500500", // Row 13 (shoes)
+        "00000000", // Row 14
+        "00000000"  // Row 15
+    ];
+
     function generateSprite() {
         ctx.clearRect(0, 0, size, size);
 
-        // Random palette generation
-        const hue = Math.floor(Math.random() * 360);
-        const mainColor = `hsl(${hue}, 70%, 50%)`;
-        const darkColor = `hsl(${hue}, 70%, 25%)`;
-        const lightColor = `hsl(${hue}, 70%, 75%)`;
+        // Randomize color schemes for variety
+        const hairHue = Math.floor(Math.random() * 50); // browns/blondes/reds
+        const shirtHue = Math.floor(Math.random() * 360); // vibrant clothing
+        const pantsHue = Math.floor(Math.random() * 360); // pants/jeans
 
-        // Fill background grid pattern for transparency preview
+        const hairColor = `hsl(${hairHue}, 60%, 30%)`;
+        const skinColor = '#f5d6b0';
+        const eyeColor = '#111111';
+        const shirtColor = `hsl(${shirtHue}, 70%, 50%)`;
+        const pantsColor = `hsl(${pantsHue}, 50%, 35%)`;
+        const shoeColor = '#333333';
+
+        // Draw checkered transparency background pattern
         for (let y = 0; y < size; y++) {
             for (let x = 0; x < size; x++) {
                 if ((x + y) % 2 === 0) {
@@ -139,31 +165,33 @@
             }
         }
 
-        // Draw symmetrical shape (left side mirrored to right side)
-        for (let y = 0; y < size; y++) {
-            for (let x = 0; x < Math.ceil(size / 2); x++) {
-                let pixelType = 0; // 0 = empty, 1 = main, 2 = dark/outline, 3 = light/accent
+        // Render human template with symmetry
+        for (let y = 0; y < humanTemplate.length; y++) {
+            const rowStr = humanTemplate[y];
+            for (let x = 0; x < rowStr.length; x++) {
+                const pixelType = parseInt(rowStr[x]);
+                if (pixelType === 0) continue;
 
-                // Simple procedural shape logic
-                if (y >= 2 && y <= 13 && x >= 4 && x <= 7) pixelType = 1; // Body/Head
-                if (y >= 5 && y <= 8 && x === 6) pixelType = 3; // Eye
-                if ((y === 2 || y === 13) && x >= 5 && x <= 6) pixelType = 2; // Hat/Feet outline
+                if (pixelType === 1) ctx.fillStyle = hairColor;
+                else if (pixelType === 2) ctx.fillStyle = skinColor;
+                else if (pixelType === 3) ctx.fillStyle = shirtColor;
+                else if (pixelType === 4) ctx.fillStyle = pantsColor;
+                else if (pixelType === 5) ctx.fillStyle = shoeColor;
 
-                if (pixelType > 0) {
-                    if (pixelType === 1) ctx.fillStyle = mainColor;
-                    if (pixelType === 2) ctx.fillStyle = darkColor;
-                    if (pixelType === 3) ctx.fillStyle = lightColor;
-
-                    // Paint left pixel
-                    ctx.fillRect(x, y, 1, 1);
-                    // Paint mirrored right pixel
-                    ctx.fillRect(size - 1 - x, y, 1, 1);
+                // Handle eye override specifically on row 3, column 6
+                if (y === 3 && x === 6) {
+                    ctx.fillStyle = eyeColor;
                 }
+
+                // Draw left side pixel
+                ctx.fillRect(x, y, 1, 1);
+                
+                // Mirror to right side pixel
+                ctx.fillRect(size - 1 - x, y, 1, 1);
             }
         }
     }
 
-    // Commit generated PNG directly to GitHub using GitHub REST API
     async function pushToGitHub() {
         const token = document.getElementById('ghToken').value.trim();
         const repo = document.getElementById('ghRepo').value.trim();
@@ -177,15 +205,13 @@
         }
 
         statusEl.style.color = '#c9d1d9';
-        statusEl.innerText = 'Encoding sprite and pushing...';
+        statusEl.innerText = 'Preparing and pushing human sprite...';
 
-        // Extract base64 payload from canvas (strip header data prefix)
         const dataUrl = canvas.toDataURL('image/png');
         const base64Content = dataUrl.split(',')[1];
         const path = `sprites/${filename}`;
 
         try {
-            // Check if file already exists to grab its SHA (required by GitHub API for updates)
             let existingSha = null;
             const checkRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -196,7 +222,6 @@
                 existingSha = fileData.sha;
             }
 
-            // Send PUT request to GitHub API to create/update file
             const response = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
                 method: 'PUT',
                 headers: {
@@ -204,15 +229,15 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    message: `Add/Update pixel sprite: ${filename}`,
+                    message: `Add human sprite: ${filename}`,
                     content: base64Content,
-                    sha: existingSha // included if overwriting an existing file version
+                    sha: existingSha
                 })
             });
 
             if (response.ok) {
                 statusEl.style.color = '#3fb950';
-                statusEl.innerText = 'Successfully pushed sprite to GitHub! 🎉';
+                statusEl.innerText = 'Successfully pushed human sprite to GitHub! 🎉';
             } else {
                 const err = await response.json();
                 throw new Error(err.message || 'Failed to commit to GitHub');
@@ -223,7 +248,7 @@
         }
     }
 
-    // Generate initial sprite on load
+    // Generate initial human sprite on load
     generateSprite();
 </script>
 
