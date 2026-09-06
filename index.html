@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Human Sprite to GitHub</title>
+    <title>Pixel PFP Generator to GitHub</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -93,22 +93,22 @@
 <body>
 
 <div class="container">
-    <h2>Human Sprite Generator</h2>
+    <h2>Pixel PFP Generator</h2>
     
     <label>GitHub Personal Access Token (repo scope)</label>
     <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx">
 
     <label>Repository (owner/repo)</label>
-    <input type="text" id="ghRepo" placeholder="username/my-pixel-sprites">
+    <input type="text" id="ghRepo" placeholder="username/my-pixel-pfps">
 
-    <label>Sprite File Name</label>
-    <input type="text" id="spriteName" value="human_hero_01.png">
+    <label>PFP File Name</label>
+    <input type="text" id="spriteName" value="pfp_01.png">
 
     <div class="canvas-container">
         <canvas id="spriteCanvas" width="16" height="16"></canvas>
     </div>
 
-    <button class="secondary" onclick="generateSprite()">🎲 Generate New Human Sprite</button>
+    <button class="secondary" onclick="generateSprite()">🎲 Generate New PFP</button>
     <button onclick="pushToGitHub()">🚀 Push to GitHub</button>
     
     <div id="status" class="status"></div>
@@ -119,73 +119,55 @@
     const ctx = canvas.getContext('2d');
     const size = 16;
 
-    // Human template layout for the left half (columns 0 to 7, mirrored to 8 to 15)
-    // 0 = transparent, 1 = hair, 2 = skin, 3 = shirt/body, 4 = pants, 5 = shoes
-    const humanTemplate = [
-        "00001110", // Row 0
-        "00011111", // Row 1
-        "00012221", // Row 2
-        "00012321", // Row 3 (eyes at col 6)
-        "00002220", // Row 4
-        "00133331", // Row 5 (shoulders)
-        "03333333", // Row 6 (arms/torso)
-        "03333333", // Row 7
-        "00333330", // Row 8
-        "00333330", // Row 9
-        "00444440", // Row 10 (pants)
-        "00400400", // Row 11 (legs)
-        "00400400", // Row 12
-        "00500500", // Row 13 (shoes)
-        "00000000", // Row 14
-        "00000000"  // Row 15
+    // Portrait / PFP face template layout (left half 0-7, mirrored to 8-15)
+    // 0 = empty, 1 = background/backdrop, 2 = hair, 3 = skin, 4 = eyes, 5 = glasses/shades, 6 = mouth/beard
+    const pfpTemplate = [
+        "11111111", // Row 0
+        "12222221", // Row 1 (hair top)
+        "12333321", // Row 2
+        "12343431", // Row 3 (eyes at 3 and 5)
+        "12333331", // Row 4
+        "12335331", // Row 5 (nose/glasses bridge)
+        "12333331", // Row 6
+        "13366331", // Row 7 (mouth)
+        "13333331", // Row 8 (chin/jaw)
+        "11222211", // Row 9 (neck/collar)
+        "11111111", // Row 10
+        "11111111", // Row 11
+        "11111111", // Row 12
+        "11111111", // Row 13
+        "11111111", // Row 14
+        "11111111"  // Row 15
     ];
 
     function generateSprite() {
         ctx.clearRect(0, 0, size, size);
 
-        // Randomize color schemes for variety
-        const hairHue = Math.floor(Math.random() * 50); // browns/blondes/reds
-        const shirtHue = Math.floor(Math.random() * 360); // vibrant clothing
-        const pantsHue = Math.floor(Math.random() * 360); // pants/jeans
+        // Random PFP traits: background color, hair color, skin tone, eye color
+        const bgHue = Math.floor(Math.random() * 360);
+        const hairHue = Math.floor(Math.random() * 50); // blonde/brown/red/dark
+        const skinTones = ['#f5d6b0', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'];
+        const skinColor = skinTones[Math.floor(Math.random() * skinTones.length)];
 
-        const hairColor = `hsl(${hairHue}, 60%, 30%)`;
-        const skinColor = '#f5d6b0';
+        const bgColor = `hsl(${bgHue}, 60%, 20%)`;
+        const hairColor = `hsl(${hairHue}, 50%, 25%)`;
         const eyeColor = '#111111';
-        const shirtColor = `hsl(${shirtHue}, 70%, 50%)`;
-        const pantsColor = `hsl(${pantsHue}, 50%, 35%)`;
-        const shoeColor = '#333333';
+        const detailColor = `hsl(${bgHue}, 80%, 50%)`; // matching accent for glasses/mouth
 
-        // Draw checkered transparency background pattern
-        for (let y = 0; y < size; y++) {
-            for (let x = 0; x < size; x++) {
-                if ((x + y) % 2 === 0) {
-                    ctx.fillStyle = '#161b22';
-                    ctx.fillRect(x, y, 1, 1);
-                }
-            }
-        }
-
-        // Render human template with symmetry
-        for (let y = 0; y < humanTemplate.length; y++) {
-            const rowStr = humanTemplate[y];
+        // Render face template with symmetry
+        for (let y = 0; y < pfpTemplate.length; y++) {
+            const rowStr = pfpTemplate[y];
             for (let x = 0; x < rowStr.length; x++) {
                 const pixelType = parseInt(rowStr[x]);
-                if (pixelType === 0) continue;
 
-                if (pixelType === 1) ctx.fillStyle = hairColor;
-                else if (pixelType === 2) ctx.fillStyle = skinColor;
-                else if (pixelType === 3) ctx.fillStyle = shirtColor;
-                else if (pixelType === 4) ctx.fillStyle = pantsColor;
-                else if (pixelType === 5) ctx.fillStyle = shoeColor;
-
-                // Handle eye override specifically on row 3, column 6
-                if (y === 3 && x === 6) {
-                    ctx.fillStyle = eyeColor;
-                }
+                if (pixelType === 1) ctx.fillStyle = bgColor;
+                else if (pixelType === 2) ctx.fillStyle = hairColor;
+                else if (pixelType === 3) ctx.fillStyle = skinColor;
+                else if (pixelType === 4) ctx.fillStyle = eyeColor;
+                else if (pixelType === 5 || pixelType === 6) ctx.fillStyle = detailColor;
 
                 // Draw left side pixel
                 ctx.fillRect(x, y, 1, 1);
-                
                 // Mirror to right side pixel
                 ctx.fillRect(size - 1 - x, y, 1, 1);
             }
@@ -205,11 +187,11 @@
         }
 
         statusEl.style.color = '#c9d1d9';
-        statusEl.innerText = 'Preparing and pushing human sprite...';
+        statusEl.innerText = 'Minting PFP to GitHub...';
 
         const dataUrl = canvas.toDataURL('image/png');
         const base64Content = dataUrl.split(',')[1];
-        const path = `sprites/${filename}`;
+        const path = `pfps/${filename}`;
 
         try {
             let existingSha = null;
@@ -229,7 +211,7 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    message: `Add human sprite: ${filename}`,
+                    message: `Add pixel PFP: ${filename}`,
                     content: base64Content,
                     sha: existingSha
                 })
@@ -237,7 +219,7 @@
 
             if (response.ok) {
                 statusEl.style.color = '#3fb950';
-                statusEl.innerText = 'Successfully pushed human sprite to GitHub! 🎉';
+                statusEl.innerText = 'Successfully pushed PFP to GitHub! 🚀';
             } else {
                 const err = await response.json();
                 throw new Error(err.message || 'Failed to commit to GitHub');
@@ -248,7 +230,7 @@
         }
     }
 
-    // Generate initial human sprite on load
+    // Generate initial PFP on load
     generateSprite();
 </script>
 
