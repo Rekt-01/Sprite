@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel PFP Generator to GitHub</title>
+    <title>64x64 CryptoPunk PFP Generator to GitHub</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -17,7 +17,7 @@
         }
         .container {
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             background: #161b22;
             padding: 20px;
             border-radius: 12px;
@@ -75,8 +75,8 @@
         canvas {
             image-rendering: pixelated;
             image-rendering: crisp-edges;
-            width: 160px;
-            height: 160px;
+            width: 256px;
+            height: 256px;
         }
         .status {
             text-align: center;
@@ -93,85 +93,143 @@
 <body>
 
 <div class="container">
-    <h2>Pixel PFP Generator</h2>
+    <h2>64x64 Punk Generator</h2>
     
     <label>GitHub Personal Access Token (repo scope)</label>
     <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx">
 
     <label>Repository (owner/repo)</label>
-    <input type="text" id="ghRepo" placeholder="username/my-pixel-pfps">
+    <input type="text" id="ghRepo" placeholder="username/my-punks">
 
-    <label>PFP File Name</label>
-    <input type="text" id="spriteName" value="pfp_01.png">
+    <label>Punk File Name</label>
+    <input type="text" id="spriteName" value="punk_01.png">
 
     <div class="canvas-container">
-        <canvas id="spriteCanvas" width="16" height="16"></canvas>
+        <!-- High-res pixel grid canvas set to 64x64 -->
+        <canvas id="punkCanvas" width="64" height="64"></canvas>
     </div>
 
-    <button class="secondary" onclick="generateSprite()">🎲 Generate New PFP</button>
+    <button class="secondary" onclick="generatePunk()">🎲 Generate New Punk</button>
     <button onclick="pushToGitHub()">🚀 Push to GitHub</button>
     
     <div id="status" class="status"></div>
 </div>
 
 <script>
-    const canvas = document.getElementById('spriteCanvas');
+    const canvas = document.getElementById('punkCanvas');
     const ctx = canvas.getContext('2d');
-    const size = 16;
+    const gridSize = 64;
 
-    // Portrait / PFP face template layout (left half 0-7, mirrored to 8-15)
-    // 0 = empty, 1 = background/backdrop, 2 = hair, 3 = skin, 4 = eyes, 5 = glasses/shades, 6 = mouth/beard
-    const pfpTemplate = [
-        "11111111", // Row 0
-        "12222221", // Row 1 (hair top)
-        "12333321", // Row 2
-        "12343431", // Row 3 (eyes at 3 and 5)
-        "12333331", // Row 4
-        "12335331", // Row 5 (nose/glasses bridge)
-        "12333331", // Row 6
-        "13366331", // Row 7 (mouth)
-        "13333331", // Row 8 (chin/jaw)
-        "11222211", // Row 9 (neck/collar)
-        "11111111", // Row 10
-        "11111111", // Row 11
-        "11111111", // Row 12
-        "11111111", // Row 13
-        "11111111", // Row 14
-        "11111111"  // Row 15
-    ];
+    function generatePunk() {
+        ctx.clearRect(0, 0, gridSize, gridSize);
 
-    function generateSprite() {
-        ctx.clearRect(0, 0, size, size);
+        // 1. Color Palettes
+        const bgColors = ['#638596', '#71485c', '#3b5c3a', '#8a7940', '#4a4468', '#9e6d42'];
+        const bgCol = bgColors[Math.floor(Math.random() * bgColors.length)];
 
-        // Random PFP traits: background color, hair color, skin tone, eye color
-        const bgHue = Math.floor(Math.random() * 360);
-        const hairHue = Math.floor(Math.random() * 50); // blonde/brown/red/dark
-        const skinTones = ['#f5d6b0', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'];
-        const skinColor = skinTones[Math.floor(Math.random() * skinTones.length)];
+        const skinTones = ['#f8d2b4', '#eac09c', '#cca17b', '#9b714f', '#64432c', '#00b4d8' /* alien */, '#55a630' /* zombie */];
+        const skinCol = skinTones[Math.floor(Math.random() * skinTones.length)];
 
-        const bgColor = `hsl(${bgHue}, 60%, 20%)`;
-        const hairColor = `hsl(${hairHue}, 50%, 25%)`;
-        const eyeColor = '#111111';
-        const detailColor = `hsl(${bgHue}, 80%, 50%)`; // matching accent for glasses/mouth
+        const hairColors = ['#1a1a1a', '#4a2810', '#d4af37', '#b22222', '#ff69b4', '#00ced1', '#e5e5e5'];
+        const hairCol = hairColors[Math.floor(Math.random() * hairColors.length)];
+        
+        const eyeCol = '#111111';
+        const shirtCol = `hsl(${Math.floor(Math.random() * 360)}, 60%, 45%)`;
 
-        // Render face template with symmetry
-        for (let y = 0; y < pfpTemplate.length; y++) {
-            const rowStr = pfpTemplate[y];
-            for (let x = 0; x < rowStr.length; x++) {
-                const pixelType = parseInt(rowStr[x]);
+        // Fill background
+        ctx.fillStyle = bgCol;
+        ctx.fillRect(0, 0, gridSize, gridSize);
 
-                if (pixelType === 1) ctx.fillStyle = bgColor;
-                else if (pixelType === 2) ctx.fillStyle = hairColor;
-                else if (pixelType === 3) ctx.fillStyle = skinColor;
-                else if (pixelType === 4) ctx.fillStyle = eyeColor;
-                else if (pixelType === 5 || pixelType === 6) ctx.fillStyle = detailColor;
-
-                // Draw left side pixel
-                ctx.fillRect(x, y, 1, 1);
-                // Mirror to right side pixel
-                ctx.fillRect(size - 1 - x, y, 1, 1);
-            }
+        // Helper function to paint a block of pixels with symmetry option
+        function drawRect(x, y, w, h, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, w, h);
         }
+
+        // --- NECK & SHOULDERS (Base Layer) ---
+        // Neck
+        drawRect(24, 48, 16, 16, skinCol);
+        // Shoulders / Shirt
+        drawRect(12, 58, 40, 6, shirtCol);
+        drawRect(8, 62, 48, 2, shirtCol);
+
+        // --- HEAD / FACE OUTLINE & SHAPE ---
+        // Main head block (centered horizontally: columns 18 to 45)
+        drawRect(18, 16, 28, 34, skinCol);
+        // Jaw narrowing
+        drawRect(20, 50, 24, 3, skinCol);
+        // Ears
+        drawRect(15, 28, 3, 10, skinCol);
+        drawRect(46, 28, 3, 10, skinCol);
+
+        // --- FACIAL FEATURES ---
+        // Eyes (Left & Right)
+        drawRect(24, 28, 5, 4, '#ffffff'); // Whites
+        drawRect(26, 29, 2, 2, eyeCol);   Pupil
+
+        drawRect(35, 28, 5, 4, '#ffffff'); // Whites
+        drawRect(36, 29, 2, 2, eyeCol);   // Pupil
+
+        // Nose
+        drawRect(30, 34, 4, 6, shadeColor(skinCol, -20));
+        drawRect(29, 38, 6, 2, shadeColor(skinCol, -30)); // Nostrils/Base
+
+        // Mouth
+        const mouthTypes = ['smile', 'neutral', 'goatee', 'pipe'];
+        const mType = mouthTypes[Math.floor(Math.random() * mouthTypes.length)];
+        
+        if (mType === 'neutral') {
+            drawRect(27, 44, 10, 2, '#441111');
+        } else if (mType === 'smile') {
+            drawRect(27, 44, 10, 2, '#441111');
+            drawRect(26, 43, 1, 1, '#441111');
+            drawRect(37, 43, 1, 1, '#441111');
+        } else {
+            // Default lips
+            drawRect(28, 44, 8, 2, '#552222');
+        }
+
+        // --- HAIR / HEADWEAR TRAITS ---
+        const hairTypes = ['mohawk', 'cap', 'wild', 'bald', 'bob'];
+        const hType = hairTypes[Math.floor(Math.random() * hairTypes.length)];
+
+        if (hType === 'mohawk') {
+            drawRect(29, 4, 6, 26, hairCol); // Center spike
+        } else if (hType === 'cap') {
+            drawRect(17, 12, 30, 8, hairCol); // Cap dome
+            drawRect(17, 18, 34, 3, '#111111'); // Brim
+        } else if (hType === 'wild') {
+            drawRect(16, 12, 32, 10, hairCol);
+            drawRect(14, 16, 4, 16, hairCol); // Side tufts
+            drawRect(46, 16, 4, 16, hairCol);
+        } else if (hType === 'bob') {
+            drawRect(16, 14, 32, 24, hairCol);
+            drawRect(19, 18, 26, 22, skinCol); // carve out face
+        }
+
+        // --- ACCESSORIES (Shades, Cigarette, Earring) ---
+        const hasShades = Math.random() > 0.5;
+        if (hasShades) {
+            drawRect(22, 26, 20, 7, '#111111'); // Black pixel sunglasses
+            drawRect(20, 28, 2, 3, '#111111');  // Bridge connectors
+            drawRect(42, 28, 2, 3, '#111111');
+        }
+
+        const hasEarring = Math.random() > 0.5;
+        if (hasEarring) {
+            drawRect(14, 35, 1, 2, '#d4af37'); // Gold hoop
+        }
+    }
+
+    // Utility to slightly darken/lighten hex colors for shadows
+    function shadeColor(color, percent) {
+        if (color.startsWith('hsl')) return color; // skip if HSL
+        let num = parseInt(color.replace("#",""), 16);
+        let amt = Math.round(2.55 * percent);
+        let R = (num >> 16) + amt;
+        let G = (num >> 8 & 0x00ff) + amt;
+        let B = (num & 0x0000ff) + amt;
+        return "#" + (0x1000000 + (R<255?R<0?0:R:255)*0x10000 + (G<255?G<0?0:G:255)*0x100 + (B<255?B<0?0:B:255)).toString(16).slice(1);
     }
 
     async function pushToGitHub() {
@@ -187,11 +245,11 @@
         }
 
         statusEl.style.color = '#c9d1d9';
-        statusEl.innerText = 'Minting PFP to GitHub...';
+        statusEl.innerText = 'Minting 64x64 Punk to GitHub...';
 
         const dataUrl = canvas.toDataURL('image/png');
         const base64Content = dataUrl.split(',')[1];
-        const path = `pfps/${filename}`;
+        const path = `punks/${filename}`;
 
         try {
             let existingSha = null;
@@ -211,7 +269,7 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    message: `Add pixel PFP: ${filename}`,
+                    message: `Add 64x64 Punk PFP: ${filename}`,
                     content: base64Content,
                     sha: existingSha
                 })
@@ -219,7 +277,7 @@
 
             if (response.ok) {
                 statusEl.style.color = '#3fb950';
-                statusEl.innerText = 'Successfully pushed PFP to GitHub! 🚀';
+                statusEl.innerText = 'Successfully pushed Punk to GitHub! 🚀';
             } else {
                 const err = await response.json();
                 throw new Error(err.message || 'Failed to commit to GitHub');
@@ -230,8 +288,8 @@
         }
     }
 
-    // Generate initial PFP on load
-    generateSprite();
+    // Generate initial punk on load
+    generatePunk();
 </script>
 
 </body>
