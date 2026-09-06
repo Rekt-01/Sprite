@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Pixel Sprite GitHub Pusher</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 400px;
+            background: #161b22;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+        }
+        h2 {
+            font-size: 1.25rem;
+            margin-top: 0;
+            text-align: center;
+            color: #f0f6fc;
+        }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10-px;
+            margin-bottom: 12px;
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        input:focus {
+            border-color: #58a6ff;
+            outline: none;
+        }
+        button {
+            background: #238636;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover {
+            background: #2ea043;
+        }
+        button.secondary {
+            background: #21262d;
+            border: 1px solid #30363d;
+        }
+        button.secondary:hover {
+            background: #30363d;
+        }
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+            background: #0d1117;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+        }
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            width: 160px;
+            height: 160px;
+        }
+        .status {
+            text-align: center;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            min-height: 20px;
+        }
+        label {
+            font-size: 0.85rem;
+            color: #8b949e;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Sprite to GitHub</h2>
+    
+    <label>GitHub Personal Access Token (repo scope)</label>
+    <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx">
+
+    <label>Repository (owner/repo)</label>
+    <input type="text" id="ghRepo" placeholder="username/my-pixel-sprites">
+
+    <label>Sprite File Name</label>
+    <input type="text" id="spriteName" value="hero_01.png">
+
+    <div class="canvas-container">
+        <canvas id="spriteCanvas" width="16" height="16"></canvas>
+    </div>
+
+    <button class="secondary" onclick="generateSprite()">🎲 Generate New Sprite</button>
+    <button onclick="pushToGitHub()">🚀 Push to GitHub</button>
+    
+    <div id="status" class="status"></div>
+</div>
+
+<script>
+    const canvas = document.getElementById('spriteCanvas');
+    const ctx = canvas.getContext('2d');
+    const size = 16;
+
+    // Procedurally generate an 8-bit symmetrical character sprite
+    function generateSprite() {
+        ctx.clearRect(0, 0, size, size);
+
+        // Random palette generation
+        const hue = Math.floor(Math.random() * 360);
+        const mainColor = `hsl(${hue}, 70%, 50%)`;
+        const darkColor = `hsl(${hue}, 70%, 25%)`;
+        const lightColor = `hsl(${hue}, 70%, 75%)`;
+
+        // Fill background grid pattern for transparency preview
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                if ((x + y) % 2 === 0) {
+                    ctx.fillStyle = '#161b22';
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+        }
+
+        // Draw symmetrical shape (left side mirrored to right side)
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < Math.ceil(size / 2); x++) {
+                let pixelType = 0; // 0 = empty, 1 = main, 2 = dark/outline, 3 = light/accent
+
+                // Simple procedural shape logic
+                if (y >= 2 && y <= 13 && x >= 4 && x <= 7) pixelType = 1; // Body/Head
+                if (y >= 5 && y <= 8 && x === 6) pixelType = 3; // Eye
+                if ((y === 2 || y === 13) && x >= 5 && x <= 6) pixelType = 2; // Hat/Feet outline
+
+                if (pixelType > 0) {
+                    if (pixelType === 1) ctx.fillStyle = mainColor;
+                    if (pixelType === 2) ctx.fillStyle = darkColor;
+                    if (pixelType === 3) ctx.fillStyle = lightColor;
+
+                    // Paint left pixel
+                    ctx.fillRect(x, y, 1, 1);
+                    // Paint mirrored right pixel
+                    ctx.fillRect(size - 1 - x, y, 1, 1);
+                }
+            }
+        }
+    }
+
+    // Commit generated PNG directly to GitHub using GitHub REST API
+    async function pushToGitHub() {
+        const token = document.getElementById('ghToken').value.trim();
+        const repo = document.getElementById('ghRepo').value.trim();
+        const filename = document.getElementById('spriteName').value.trim();
+        const statusEl = document.getElementById('status');
+
+        if (!token || !repo || !filename) {
+            statusEl.style.color = '#f85149';
+            statusEl.innerText = 'Please fill out all fields!';
+            return;
+        }
+
+        statusEl.style.color = '#c9d1d9';
+        statusEl.innerText = 'Encoding sprite and pushing...';
+
+        // Extract base64 payload from canvas (strip header data prefix)
+        const dataUrl = canvas.toDataURL('image/png');
+        const base64Content = dataUrl.split(',')[1];
+        const path = `sprites/${filename}`;
+
+        try {
+            // Check if file already exists to grab its SHA (required by GitHub API for updates)
+            let existingSha = null;
+            const checkRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            if (checkRes.ok) {
+                const fileData = await checkRes.json();
+                existingSha = fileData.sha;
+            }
+
+            // Send PUT request to GitHub API to create/update file
+            const response = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: `Add/Update pixel sprite: ${filename}`,
+                    content: base64Content,
+                    sha: existingSha // included if overwriting an existing file version
+                })
+            });
+
+            if (response.ok) {
+                statusEl.style.color = '#3fb950';
+                statusEl.innerText = 'Successfully pushed sprite to GitHub! 🎉';
+            } else {
+                const err = await response.json();
+                throw new Error(err.message || 'Failed to commit to GitHub');
+            }
+        } catch (error) {
+            statusEl.style.color = '#f85149';
+            statusEl.innerText = `Error: ${error.message}`;
+        }
+    }
+
+    // Generate initial sprite on load
+    generateSprite();
+</script>
+
+</body>
+</html>
